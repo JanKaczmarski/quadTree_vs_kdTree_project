@@ -1,7 +1,6 @@
 import matplotlib.pyplot as plt
 import random
 
-
 GEN_POINT_NUMBER = 64
 QT_NODE_CAPACITY = 4
 
@@ -28,32 +27,32 @@ class AABB:
 
     def contains_point(self, point: XY) -> bool:
         """
-        Check if a point is within the bounds of the rectangle.
-        
+        Check if a point is within the bounds of the rectangle
+
         :param point: The point to check.
         :return: True if the point is within the bounds, otherwise False.
         """
         x_valid = self.center.x - self.half_width <= point.x <= self.center.x + self.half_width
         y_valid = self.center.y - self.half_height <= point.y <= self.center.y + self.half_height
-        
+
         return x_valid and y_valid
 
     def intersects_AABB(self, other: 'AABB') -> bool:
         """
         Check if this AABB intersects with another AABB. Two AABBs intersect
         if their projections on both axes overlap.
-        
+
         :param other: The other AABB to check for intersection.
         :return: True if the AABBs intersect, otherwise False.
         """
         # Calculate the distance between centers
         dx = abs(other.center.x - self.center.x)
         dy = abs(other.center.y - self.center.y)
-        
+
         # Check overlap on x-axis and y-axis
         overlap_x = dx <= (self.half_width + other.half_width)
         overlap_y = dy <= (self.half_height + other.half_height)
-        
+
         # If both axes overlap, the rectangles intersect
         return overlap_x and overlap_y
 
@@ -131,8 +130,8 @@ class QuadTree:
                 
         # TODO: jk: check if there should be .clear instead of new list assignment
         self.points = []
-        
-    def queryRange(self, box: AABB) -> list[XY]:
+
+    def query_range(self, box: AABB) -> list[XY]:
         """
         Find all points that appear within a box
         """
@@ -153,10 +152,19 @@ class QuadTree:
 
         # add all points from children that are within range
         for child in [self.north_west, self.north_east, self.south_west, self.south_east]:
-            for point in child.queryRange(box):
+            for point in child.query_range(box):
                 points_in_range.append(point)
 
         return points_in_range
+
+
+def BuildQuadTree(boundary: AABB, node_capacity: int, points: list[XY]) -> QuadTree:
+    qtree = QuadTree(boundary, capacity=node_capacity)
+
+    for point in points:
+        qtree.insert(point)
+
+    return qtree
 
 
 # Random points generator
@@ -199,22 +207,22 @@ def main():
         qtree.insert(point)
         x_cord.append(point.x)
         y_cord.append(point.y)
-        
+
     q_range = AABB(XY(8, 8), 12, 8)
-    result = qtree.queryRange(q_range)
-    
+    result = qtree.query_range(q_range)
+
     print(f"Range - center: ({q_range.center.x}, {q_range.center.y}), HALF_WIDTH={q_range.half_width * 2}, HALF_WIDTH={q_range.half_height * 2}")
     for p in result:
         print(f"X: {p.x}, Y: {p.y}")
-    
+
     print(len(result))
     pts = []
-    
+
     get_points(qtree, pts)
-    
+
     print(len(pts))
-    
-    
+
+
     plt.scatter(x_cord, y_cord, c='blue', marker='o')
     plt.show()
 
