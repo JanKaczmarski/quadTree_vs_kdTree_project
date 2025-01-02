@@ -1,6 +1,5 @@
 import matplotlib.pyplot as plt
 import random
-from visualizer.main import Visualizer
 
 GEN_POINT_NUMBER = 64
 QT_NODE_CAPACITY = 4
@@ -157,4 +156,4 @@ def BuildQuadTree(boundary: AABB, node_capacity: int, points: list[tuple[float, 
         qtree.insert(point)
 
     return qtree
-
+  

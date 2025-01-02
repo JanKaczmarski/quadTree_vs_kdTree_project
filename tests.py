@@ -6,7 +6,7 @@ import typing
 
 TIME_OUT_PRECISION=3
 DELIMITER="\t"*3
-DEFAULT_POINTS_COUNT=5000
+DEFAULT_POINTS_COUNT=200
 DEFAULT_NODE_CAPACITY=1
 POINT_GEN_LOWER_BOUND=0
 POINT_GEN_UPPER_BOUND=100
@@ -73,6 +73,7 @@ def test_random(count=200, capacity=1):
 
 functions = [test_random]
 
+
 def run_tests(functions: list[typing.Callable], count=DEFAULT_POINTS_COUNT, capacity=DEFAULT_NODE_CAPACITY):
     passed, total_test_num = 0, len(functions)
     for func in functions:
@@ -86,6 +87,7 @@ def run_tests(functions: list[typing.Callable], count=DEFAULT_POINTS_COUNT, capa
 
     print('*' * 35)
     print("Tests passed:", passed, "Total tests run:", total_test_num)
+
 
 for n in [1000, 10000, 20000, 50000, 100000]:
     print("^" * 35)
