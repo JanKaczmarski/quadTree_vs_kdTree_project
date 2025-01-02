@@ -1,4 +1,5 @@
 import quadtree as qt
+import kdtree as kd
 import numpy as np
 import time
 import typing
@@ -21,18 +22,22 @@ def measure_func(title, func: typing.Callable[..., T], *args, **kwargs) -> tuple
     """
     Takes function that takes any number of params and return any type. Measures time for this function to commplete and returns function output
     """
-    start_time = time.time()
+    start_time = time.perf_counter()
     out = func(*args, **kwargs)
-    total_time = time.time() - start_time
+    total_time = time.perf_counter() - start_time
 
-    # Make this printing prune alligned. Making restriction on max title length should solve the issue
-    print(f"{title}:{DELIMITER}{round(total_time, TIME_OUT_PRECISION)}")
+    # TODO: jk: Make this printing prune alligned. Making restriction on max title length should solve the issue
+    print(f"{title}:{DELIMITER}{round(total_time, TIME_OUT_PRECISION)} s")
 
     return out, total_time
 
 
-def generate_random_points(num_points, range_min, range_max) -> list[qt.XY]:
-    return [qt.XY(np.random.uniform(range_min, range_max), np.random.uniform(range_min, range_max)) for _ in range(num_points)]
+def generate_random_points(num_points, range_min, range_max) -> list[tuple[float, float]]:
+    """
+    Generate random points for both QuadTree and KDTree, respecting both data structures desired input
+    """
+    
+    return [(np.random.uniform(range_min, range_max), np.random.uniform(range_min, range_max)) for _ in range(num_points)]
 
 
 def test_random(count=200, capacity=1):
@@ -40,32 +45,35 @@ def test_random(count=200, capacity=1):
 
     # Build and measure QuadTree init time
     qtree, _ = measure_func("QuadTree build time", qt.BuildQuadTree, qt.AABB(
-            qt.XY(DEFAULT_AABB_CENTER_X, DEFAULT_AABB_CENTER_Y), POINT_GEN_UPPER_BOUND/2, POINT_GEN_UPPER_BOUND/2
+            (DEFAULT_AABB_CENTER_X, DEFAULT_AABB_CENTER_Y), POINT_GEN_UPPER_BOUND/2, POINT_GEN_UPPER_BOUND/2
         ),
         capacity,
         points=points
     )
 
-    # TODO: jk: Build and measure KDTree init time
-    # <implementation here>
-
-    rect_aabb = qt.AABB(qt.XY(20, 20), 18, 15)
+    # Build and measure KDTree init time
+    kdtree, _ = measure_func("KDTree build time", kd.build_kd_tree, points)
+    
+    
+    # x_min, x_max, y_min, y_max
+    section = 2, 38, 5, 35
+    rect_section = kd.rect(section[0], section[1], section[2], section[3])
+    # convert section representation to AABB representation
+    rect_aabb = qt.AABB(((section[0] + section[1])/2 , (section[2] + section[3])/2),
+                        (section[1] - section[0])/2, (section[3] - section[2])/2)
 
     # Measure time for query in QuadTree
-    q_out = measure_func("Measure QuadTree query time", qtree.query_range, rect_aabb)
+    q_out, _ = measure_func("Measure QuadTree query time", qtree.query_range, rect_aabb)
 
     # Measure time for query in KDTree
+    kd_out, _ = measure_func("Measure KDTree query time", kd.points_inside_rect, rect_section, kdtree)
 
-    # TODO: jk: Make Testing for KDTree querying
+    return set(q_out) == set(kd_out)
 
-    #result = compare_out(q_out, kd_out)
-    #assert(result, True)
-
-    #return result
-    return True
 
 functions = [test_random]
 
+# TODO: jk: Make this testing for different point ranges more verbose
 def run_tests(functions: list[typing.Callable], count=DEFAULT_POINTS_COUNT, capacity=DEFAULT_NODE_CAPACITY):
     passed, total_test_num = 0, len(functions)
     for func in functions:
@@ -80,5 +88,9 @@ def run_tests(functions: list[typing.Callable], count=DEFAULT_POINTS_COUNT, capa
     print('*' * 35)
     print("Tests passed:", passed, "Total tests run:", total_test_num)
 
-run_tests(functions)
+
+for n in [1000, 10000, 20000, 50000, 100000]:
+    print("^" * 35)
+    print("Number of points:", n)
+    run_tests(functions, count=n)
 
