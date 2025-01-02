@@ -1,20 +1,13 @@
 import matplotlib.pyplot as plt
 import random
 
-
 GEN_POINT_NUMBER = 64
 QT_NODE_CAPACITY = 4
 
-# Simple coordinate object to represent points and vectors
-class XY:
-    def __init__(self, x: float, y: float):
-        self.x = x
-        self.y = y
 
- 
 # Axis-aligned bounding box with half dimension and center
 class AABB:
-    def __init__(self, center: XY, half_width: float, half_height: float):
+    def __init__(self, center: tuple[float, float], half_width: float, half_height: float):
         """
         Initialize an axis-aligned bounding box (AABB).
         
@@ -26,34 +19,34 @@ class AABB:
         self.half_width = half_width
         self.half_height = half_height
 
-    def contains_point(self, point: XY) -> bool:
+    def contains_point(self, point: tuple[float, float]) -> bool:
         """
-        Check if a point is within the bounds of the rectangle.
-        
+        Check if a point is within the bounds of the rectangle
+
         :param point: The point to check.
         :return: True if the point is within the bounds, otherwise False.
         """
-        x_valid = self.center.x - self.half_width <= point.x <= self.center.x + self.half_width
-        y_valid = self.center.y - self.half_height <= point.y <= self.center.y + self.half_height
-        
+        x_valid = self.center[0] - self.half_width <= point[0] <= self.center[0] + self.half_width
+        y_valid = self.center[1] - self.half_height <= point[1] <= self.center[1] + self.half_height
+
         return x_valid and y_valid
 
     def intersects_AABB(self, other: 'AABB') -> bool:
         """
         Check if this AABB intersects with another AABB. Two AABBs intersect
         if their projections on both axes overlap.
-        
+
         :param other: The other AABB to check for intersection.
         :return: True if the AABBs intersect, otherwise False.
         """
         # Calculate the distance between centers
-        dx = abs(other.center.x - self.center.x)
-        dy = abs(other.center.y - self.center.y)
-        
+        dx = abs(other.center[0] - self.center[0])
+        dy = abs(other.center[1] - self.center[1])
+
         # Check overlap on x-axis and y-axis
         overlap_x = dx <= (self.half_width + other.half_width)
         overlap_y = dy <= (self.half_height + other.half_height)
-        
+
         # If both axes overlap, the rectangles intersect
         return overlap_x and overlap_y
 
@@ -68,7 +61,7 @@ class QuadTree:
         # represent boundary of this quad tree
         self.boundary = boundary
 
-        # XY points that this quadTree holds, len(points) <= self.qt_node_capacity
+        # points that this quadTree holds, len(points) <= self.qt_node_capacity
         self.points = []
         
         # Childs of this QuadTree Node, they are of type QuadTree
@@ -78,16 +71,16 @@ class QuadTree:
         self.south_east = None
  
     
-    def insert(self, point: XY) -> None:
+    def insert(self, point: tuple[float, float]) -> None:
         contains_point = self.boundary.contains_point(point)
 
         if not contains_point:
-            #print(self.boundary.center.x, self.boundary.center.y, self.boundary.half_width, self.boundary.half_height, " not contains point: ", point.x, point.y)
+            #print(self.boundary.center[0], self.boundary.center[1], self.boundary.half_width, self.boundary.half_height, " not contains point: ", point[0], point[1])
             return
 
         # We hvaen't created children yet and can still put points inside a box
         if self.north_west is None and len(self.points) < self.qt_node_capacity:
-            #print("Inserted", point.x, point.y, "into square: ", self.boundary.center.x, self.boundary.center.y)
+            #print("Inserted", point[0], point[1], "into square: ", self.boundary.center[0], self.boundary.center[1])
             self.points.append(point)
         # if in point is in range, but we have too much inside current node
         else:
@@ -108,16 +101,16 @@ class QuadTree:
 
         # Create child AABBs
         self.north_west = QuadTree(
-            AABB(XY(self.boundary.center.x - q_width, self.boundary.center.y - q_height), q_width, q_height)
+            AABB((self.boundary.center[0] - q_width, self.boundary.center[1] - q_height), q_width, q_height)
         )
         self.north_east = QuadTree(
-            AABB(XY(self.boundary.center.x + q_width, self.boundary.center.y - q_height), q_width, q_height)
+            AABB((self.boundary.center[0] + q_width, self.boundary.center[1] - q_height), q_width, q_height)
         )
         self.south_west = QuadTree(
-            AABB(XY(self.boundary.center.x - q_width, self.boundary.center.y + q_height), q_width, q_height)
+            AABB((self.boundary.center[0] - q_width, self.boundary.center[1] + q_height), q_width, q_height)
         )
         self.south_east = QuadTree(
-            AABB(XY(self.boundary.center.x + q_width, self.boundary.center.y + q_height), q_width, q_height)
+            AABB((self.boundary.center[0] + q_width, self.boundary.center[1] + q_height), q_width, q_height)
         )
 
         #print(f"SUBDIVIDE_ID: {id}, parent: {self}")
@@ -131,8 +124,8 @@ class QuadTree:
                 
         # TODO: jk: check if there should be .clear instead of new list assignment
         self.points = []
-        
-    def queryRange(self, box: AABB) -> list[XY]:
+
+    def query_range(self, box: AABB) -> list[tuple[float, float]]:
         """
         Find all points that appear within a box
         """
@@ -153,20 +146,29 @@ class QuadTree:
 
         # add all points from children that are within range
         for child in [self.north_west, self.north_east, self.south_west, self.south_east]:
-            for point in child.queryRange(box):
+            for point in child.query_range(box):
                 points_in_range.append(point)
 
         return points_in_range
 
 
+def BuildQuadTree(boundary: AABB, node_capacity: int, points: list[tuple[float, float]]) -> QuadTree:
+    qtree = QuadTree(boundary, capacity=node_capacity)
+
+    for point in points:
+        qtree.insert(point)
+
+    return qtree
+
+
 # Random points generator
 def generate_random_points(num_points, range_min, range_max):
-    return [XY(random.uniform(range_min, range_max), random.uniform(range_min, range_max)) for _ in range(num_points)]
+    return [(random.uniform(range_min, range_max), random.uniform(range_min, range_max)) for _ in range(num_points)]
 
 
 def get_points(node: QuadTree, points):
     for p in node.points:
-        #print(p.x, p.y)
+        #print(p[0], p[1])
         points.append(p)
     for child in [node.north_west, node.north_east, node.south_west, node.south_east]:
         if child:
@@ -174,7 +176,7 @@ def get_points(node: QuadTree, points):
 
 def main():
     qtree = QuadTree(
-        AABB(XY(32, 32), 32, 32)
+        AABB((32, 32), 32, 32)
     )
 
     # Generate 100 random points
@@ -193,28 +195,28 @@ def main():
     
     for point in random_points:
         qtree.insert(point)
-        x_cord.append(point.x)
-        y_cord.append(point.y)
+        x_cord.append(point[0])
+        y_cord.append(point[1])
     for point in random_points_upper_right:
         qtree.insert(point)
-        x_cord.append(point.x)
-        y_cord.append(point.y)
-        
-    q_range = AABB(XY(8, 8), 12, 8)
-    result = qtree.queryRange(q_range)
-    
-    print(f"Range - center: ({q_range.center.x}, {q_range.center.y}), HALF_WIDTH={q_range.half_width * 2}, HALF_WIDTH={q_range.half_height * 2}")
+        x_cord.append(point[0])
+        y_cord.append(point[1])
+
+    q_range = AABB((8, 8), 12, 8)
+    result = qtree.query_range(q_range)
+
+    print(f"Range - center: ({q_range.center[0]}, {q_range.center[1]}), HALF_WIDTH={q_range.half_width * 2}, HALF_WIDTH={q_range.half_height * 2}")
     for p in result:
-        print(f"X: {p.x}, Y: {p.y}")
-    
+        print(f"X: {p[0]}, Y: {p[1]}")
+
     print(len(result))
     pts = []
-    
+
     get_points(qtree, pts)
-    
+
     print(len(pts))
-    
-    
+
+
     plt.scatter(x_cord, y_cord, c='blue', marker='o')
     plt.show()
 
