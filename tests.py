@@ -6,7 +6,7 @@ import typing
 
 TIME_OUT_PRECISION=3
 DELIMITER="\t"*3
-DEFAULT_POINTS_COUNT=15999
+DEFAULT_POINTS_COUNT=5000
 DEFAULT_NODE_CAPACITY=1
 POINT_GEN_LOWER_BOUND=0
 POINT_GEN_UPPER_BOUND=100
@@ -22,19 +22,14 @@ def measure_func(title, func: typing.Callable[..., T], *args, **kwargs) -> tuple
     """
     Takes function that takes any number of params and return any type. Measures time for this function to commplete and returns function output
     """
-    start_time = time.time()
+    start_time = time.perf_counter()
     out = func(*args, **kwargs)
-    total_time = time.time() - start_time
+    total_time = time.perf_counter() - start_time
 
-    # Make this printing prune alligned. Making restriction on max title length should solve the issue
+    # TODO: jk: Make this printing prune alligned. Making restriction on max title length should solve the issue
     print(f"{title}:{DELIMITER}{round(total_time, TIME_OUT_PRECISION)} s")
 
     return out, total_time
-
-
-def compare_output(q_out, kd_out):
-    
-    return set(q_out) == set(kd_out)
 
 
 def generate_random_points(num_points, range_min, range_max) -> list[tuple[float, float]]:
@@ -73,7 +68,7 @@ def test_random(count=200, capacity=1):
     # Measure time for query in KDTree
     kd_out, _ = measure_func("Measure KDTree query time", kd.points_inside_rect, rect_section, kdtree)
 
-    return compare_output(q_out, kd_out)
+    return set(q_out) == set(kd_out)
 
 
 functions = [test_random]
@@ -92,4 +87,8 @@ def run_tests(functions: list[typing.Callable], count=DEFAULT_POINTS_COUNT, capa
     print('*' * 35)
     print("Tests passed:", passed, "Total tests run:", total_test_num)
 
-run_tests(functions)
+for n in [1000, 10000, 20000, 50000, 100000]:
+    print("^" * 35)
+    print("Number of points:", n)
+    run_tests(functions, count=n)
+

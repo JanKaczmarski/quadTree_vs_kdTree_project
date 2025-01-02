@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import random
+from visualizer.main import Visualizer
 
 GEN_POINT_NUMBER = 64
 QT_NODE_CAPACITY = 4
@@ -75,12 +76,10 @@ class QuadTree:
         contains_point = self.boundary.contains_point(point)
 
         if not contains_point:
-            #print(self.boundary.center[0], self.boundary.center[1], self.boundary.half_width, self.boundary.half_height, " not contains point: ", point[0], point[1])
             return
 
         # We hvaen't created children yet and can still put points inside a box
         if self.north_west is None and len(self.points) < self.qt_node_capacity:
-            #print("Inserted", point[0], point[1], "into square: ", self.boundary.center[0], self.boundary.center[1])
             self.points.append(point)
         # if in point is in range, but we have too much inside current node
         else:
@@ -113,7 +112,6 @@ class QuadTree:
             AABB((self.boundary.center[0] + q_width, self.boundary.center[1] + q_height), q_width, q_height)
         )
 
-        #print(f"SUBDIVIDE_ID: {id}, parent: {self}")
         # Split all points of current quadtree to all of its children
         for point in self.points:
 
@@ -159,68 +157,4 @@ def BuildQuadTree(boundary: AABB, node_capacity: int, points: list[tuple[float, 
         qtree.insert(point)
 
     return qtree
-
-
-# Random points generator
-def generate_random_points(num_points, range_min, range_max):
-    return [(random.uniform(range_min, range_max), random.uniform(range_min, range_max)) for _ in range(num_points)]
-
-
-def get_points(node: QuadTree, points):
-    for p in node.points:
-        #print(p[0], p[1])
-        points.append(p)
-    for child in [node.north_west, node.north_east, node.south_west, node.south_east]:
-        if child:
-            get_points(child, points)
-
-def main():
-    qtree = QuadTree(
-        AABB((32, 32), 32, 32)
-    )
-
-    # Generate 100 random points
-    random_points_upper_right = generate_random_points(GEN_POINT_NUMBER - 15, 0, 24)
-    random_points = generate_random_points(15, 25, 64)
-
-    # Plot these points
-    plt.figure(figsize=(8, 8))
-    plt.title("Randomly Generated Points (Range 0 to 50)")
-    plt.xlabel("X")
-    plt.ylabel("Y")
-    plt.grid(True)
-    
-    x_cord = []
-    y_cord = []
-    
-    for point in random_points:
-        qtree.insert(point)
-        x_cord.append(point[0])
-        y_cord.append(point[1])
-    for point in random_points_upper_right:
-        qtree.insert(point)
-        x_cord.append(point[0])
-        y_cord.append(point[1])
-
-    q_range = AABB((8, 8), 12, 8)
-    result = qtree.query_range(q_range)
-
-    print(f"Range - center: ({q_range.center[0]}, {q_range.center[1]}), HALF_WIDTH={q_range.half_width * 2}, HALF_WIDTH={q_range.half_height * 2}")
-    for p in result:
-        print(f"X: {p[0]}, Y: {p[1]}")
-
-    print(len(result))
-    pts = []
-
-    get_points(qtree, pts)
-
-    print(len(pts))
-
-
-    plt.scatter(x_cord, y_cord, c='blue', marker='o')
-    plt.show()
-
-
-if __name__ == '__main__':
-    main()
 
