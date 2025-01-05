@@ -16,8 +16,6 @@ DEFAULT_AABB_CENTER_Y=50
 # Allows to annotate return value to be the same as that of accepted parameter
 # Used in measure_func function
 T = typing.TypeVar('T')
-
-
 def measure_func(title, func: typing.Callable[..., T], *args, **kwargs) -> tuple[T, float]:
     """
     Takes function that takes any number of params and return any type. Measures time for this function to commplete and returns function output
@@ -140,7 +138,8 @@ def test_clusters(count=200, capacity=1):
     return set(q_out) == set(kd_out)
 
 
-functions = [test_random, test_normal_dist, test_clusters]
+functions_fast = [test_random, test_normal_dist]
+functions_slow = [test_clusters]
 
 
 # TODO: jk: Make this testing for different point ranges more verbose
@@ -159,8 +158,17 @@ def run_tests(functions: list[typing.Callable], count=DEFAULT_POINTS_COUNT, capa
     print("Tests passed:", passed, "Total tests run:", total_test_num)
 
 
+print("Testing FAST functions")
+print("&" * 35)
 for n in [1000, 10000, 20000, 50000, 100000]:
     print("^" * 35)
     print("Number of points:", n)
-    run_tests(functions, count=n)
+    run_tests(functions_fast, count=n)
+
+print("Testing SLOW functions")
+print("&" * 35)
+for n in [100, 200, 500, 1000, 2000]:
+    print("^" * 35)
+    print("Number of points:", n)
+    run_tests(functions_slow, count=n)
 
