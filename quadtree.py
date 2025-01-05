@@ -1,6 +1,3 @@
-import matplotlib.pyplot as plt
-import random
-
 GEN_POINT_NUMBER = 64
 QT_NODE_CAPACITY = 4
 

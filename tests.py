@@ -32,16 +32,16 @@ def measure_func(title, func: typing.Callable[..., T], *args, **kwargs) -> tuple
     return out, total_time
 
 
-def generate_random_points(num_points, range_min, range_max) -> list[tuple[float, float]]:
+def generate_points(gen_func: typing.Callable, num_points: int, range_min, range_max) -> list[tuple[float, float]]:
     """
-    Generate random points for both QuadTree and KDTree, respecting both data structures desired input
+    Generate points for both QuadTree and KDTree, respecting both data structures desired input. 
     """
     
-    return [(np.random.uniform(range_min, range_max), np.random.uniform(range_min, range_max)) for _ in range(num_points)]
+    return [(gen_func(range_min, range_max), gen_func(range_min, range_max)) for _ in range(num_points)]
 
 
 def test_random(count=200, capacity=1):
-    points = generate_random_points(count, POINT_GEN_LOWER_BOUND, POINT_GEN_UPPER_BOUND)
+    points = generate_points(np.random.uniform, count, POINT_GEN_LOWER_BOUND, POINT_GEN_UPPER_BOUND)
 
     # Build and measure QuadTree init time
     qtree, _ = measure_func("QuadTree build time", qt.BuildQuadTree, qt.AABB(
@@ -71,7 +71,77 @@ def test_random(count=200, capacity=1):
     return set(q_out) == set(kd_out)
 
 
-functions = [test_random]
+def test_normal_dist(count=200, capacity=1):
+    points = generate_points(np.random.normal, count, POINT_GEN_LOWER_BOUND, POINT_GEN_UPPER_BOUND)
+
+    # Build and measure QuadTree init time
+    qtree, _ = measure_func("QuadTree build time", qt.BuildQuadTree, qt.AABB(
+            (DEFAULT_AABB_CENTER_X, DEFAULT_AABB_CENTER_Y), POINT_GEN_UPPER_BOUND/2, POINT_GEN_UPPER_BOUND/2
+        ),
+        capacity,
+        points=points
+    )
+
+    # Build and measure KDTree init time
+    kdtree, _ = measure_func("KDTree build time", kd.build_kd_tree, points)
+    
+    
+    # x_min, x_max, y_min, y_max
+    section = 25, 75, 25, 75
+    rect_section = kd.rect(section[0], section[1], section[2], section[3])
+    # convert section representation to AABB representation
+    rect_aabb = qt.AABB(((section[0] + section[1])/2 , (section[2] + section[3])/2),
+                        (section[1] - section[0])/2, (section[3] - section[2])/2)
+
+    # Measure time for query in QuadTree
+    q_out, _ = measure_func("Measure QuadTree query time", qtree.query_range, rect_aabb)
+
+    # Measure time for query in KDTree
+    kd_out, _ = measure_func("Measure KDTree query time", kd.points_inside_rect, rect_section, kdtree)
+
+    return set(q_out) == set(kd_out)
+
+def test_clusters(count=200, capacity=1):
+    """
+    Test for measuring clutered points query/build time
+    """
+    points = []
+    # Ranges simulate 
+    for _ in range(count // 2):
+        points.extend(generate_points(np.random.uniform, count // 4, 0, 20))
+    for _ in range(count // 2):
+        points.extend(generate_points(np.random.uniform, count // 4, 80, 100))
+
+    # Build and measure QuadTree init time
+    qtree, _ = measure_func("QuadTree build time", qt.BuildQuadTree, qt.AABB(
+            (DEFAULT_AABB_CENTER_X, DEFAULT_AABB_CENTER_Y), POINT_GEN_UPPER_BOUND/2, POINT_GEN_UPPER_BOUND/2
+        ),
+        capacity,
+        points=points
+    )
+
+    # Build and measure KDTree init time
+    kdtree, _ = measure_func("KDTree build time", kd.build_kd_tree, points)
+
+
+    # x_min, x_max, y_min, y_max
+    section = 10, 90, 10, 90
+    rect_section = kd.rect(section[0], section[1], section[2], section[3])
+    # convert section representation to AABB representation
+    rect_aabb = qt.AABB(((section[0] + section[1])/2 , (section[2] + section[3])/2),
+                        (section[1] - section[0])/2, (section[3] - section[2])/2)
+
+    # Measure time for query in QuadTree
+    q_out, _ = measure_func("Measure QuadTree query time", qtree.query_range, rect_aabb)
+
+    # Measure time for query in KDTree
+    kd_out, _ = measure_func("Measure KDTree query time", kd.points_inside_rect, rect_section, kdtree)
+
+    return set(q_out) == set(kd_out)
+
+
+functions = [test_random, test_normal_dist, test_clusters]
+
 
 # TODO: jk: Make this testing for different point ranges more verbose
 def run_tests(functions: list[typing.Callable], count=DEFAULT_POINTS_COUNT, capacity=DEFAULT_NODE_CAPACITY):
