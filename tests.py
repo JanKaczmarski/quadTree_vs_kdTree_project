@@ -138,8 +138,82 @@ def test_clusters(count=200, capacity=1):
     return set(q_out) == set(kd_out)
 
 
-functions_fast = [test_random, test_normal_dist]
-functions_slow = [test_clusters]
+def test_outliers(count=200, capacity=1):
+    points = []
+    for _ in range((count * 99) // 100):
+        point = (np.random.uniform(40, 50), np.random.uniform(30, 40))
+        points.append(point)
+    for _ in range(count - (count * 99) // 100):
+        point = (np.random.uniform(0, 100), np.random.uniform(0, 100))
+        points.append(point)
+
+    # Build and measure QuadTree init time
+    qtree, _ = measure_func("QuadTree build time", qt.BuildQuadTree, qt.AABB(
+            (DEFAULT_AABB_CENTER_X, DEFAULT_AABB_CENTER_Y), POINT_GEN_UPPER_BOUND/2, POINT_GEN_UPPER_BOUND/2
+        ),
+        capacity,
+        points=points
+    )
+
+    # Build and measure KDTree init time
+    kdtree, _ = measure_func("KDTree build time", kd.build_kd_tree, points)
+
+
+    # x_min, x_max, y_min, y_max
+    section = 45, 83, 23, 28
+    rect_section = kd.rect(section[0], section[1], section[2], section[3])
+    # convert section representation to AABB representation
+    rect_aabb = qt.AABB(((section[0] + section[1])/2 , (section[2] + section[3])/2),
+                        (section[1] - section[0])/2, (section[3] - section[2])/2)
+
+    # Measure time for query in QuadTree
+    q_out, _ = measure_func("Measure QuadTree query time", qtree.query_range, rect_aabb)
+
+    # Measure time for query in KDTree
+    kd_out, _ = measure_func("Measure KDTree query time", kd.points_inside_rect, rect_section, kdtree)
+
+    return set(q_out) == set(kd_out)
+   
+
+def test_cross(count=200, capacity=1):
+    points = []
+    for _ in range(count // 2):
+        point = (np.random.uniform(0, 50), 50)
+        points.append(point)
+    for _ in range(count // 2 + count % 2):
+        point = (25, np.random.uniform(0, 100))
+        points.append(point)
+
+    # Build and measure QuadTree init time
+    qtree, _ = measure_func("QuadTree build time", qt.BuildQuadTree, qt.AABB(
+            (25, 50), 25, 50
+        ),
+        capacity,
+        points=points
+    )
+
+    # Build and measure KDTree init time
+    kdtree, _ = measure_func("KDTree build time", kd.build_kd_tree, points)
+
+
+    # x_min, x_max, y_min, y_max
+    section = 20, 40, 20, 60
+    rect_section = kd.rect(section[0], section[1], section[2], section[3])
+    # convert section representation to AABB representation
+    rect_aabb = qt.AABB(((section[0] + section[1])/2 , (section[2] + section[3])/2),
+                        (section[1] - section[0])/2, (section[3] - section[2])/2)
+
+    # Measure time for query in QuadTree
+    q_out, _ = measure_func("Measure QuadTree query time", qtree.query_range, rect_aabb)
+
+    # Measure time for query in KDTree
+    kd_out, _ = measure_func("Measure KDTree query time", kd.points_inside_rect, rect_section, kdtree)
+
+    return set(q_out) == set(kd_out)
+
+
+functions_fast = [test_random, test_normal_dist, test_outliers]
+functions_slow = [test_clusters, test_cross]
 
 
 # TODO: jk: Make this testing for different point ranges more verbose
