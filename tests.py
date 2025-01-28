@@ -1,3 +1,4 @@
+import viss
 import quadtree as qt
 import kdtree as kd
 import numpy as np
@@ -211,7 +212,38 @@ def test_cross(count=200, capacity=1):
 
     return set(q_out) == set(kd_out)
 
+def test_viss(count=200, capacity=1):
+    points, section = viss.collect()
 
+    # Build and measure QuadTree init time
+    qtree, _ = measure_func("QuadTree build time", qt.BuildQuadTree, qt.AABB(
+            (25, 50), 25, 50
+        ),
+        capacity,
+        points=points
+    )
+
+    # Build and measure KDTree init time
+    kdtree, _ = measure_func("KDTree build time", kd.build_kd_tree, points)
+
+
+
+    rect_section = kd.rect(section[0], section[1], section[2], section[3])
+    # convert section representation to AABB representation
+    rect_aabb = qt.AABB(((section[0] + section[1])/2 , (section[2] + section[3])/2),
+                        (section[1] - section[0])/2, (section[3] - section[2])/2)
+
+    # Measure time for query in QuadTree
+    q_out, _ = measure_func("Measure QuadTree query time", qtree.query_range, rect_aabb)
+
+    # Measure time for query in KDTree
+    kd_out, _ = measure_func("Measure KDTree query time", kd.points_inside_rect, rect_section, kdtree)
+
+    return set(q_out) == set(kd_out)
+
+
+
+#TODO: jk: Measure test_viss function
 functions_fast = [test_random, test_normal_dist, test_outliers]
 functions_slow = [test_clusters, test_cross]
 
